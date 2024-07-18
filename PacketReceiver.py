@@ -1,12 +1,11 @@
-from scapy.all import sniff, Raw, IP, ICMP # pylint: disable=no-name-in-module
-from colorama import Fore, Back, Style
-from CustomDataWrapper import Data, Buffer
-from ProtocolBuilder import ProtocolBuilder
-from Misc import * # pylint: disable=unused-wildcard-import
-import struct
+from scapy.all import sniff, Raw, AsyncSniffer, Packet
+import scapy
+import threading
+import array
+from typing import Any, Callable
+from Misc import wprint, eprint, sprint
+from Buffer import Buffer
 from all_message import all_message
-from all_type import all_types
-
 all_items = {}
 
 class CustomDataWrapper:
@@ -294,98 +293,74 @@ id_to_class = {
     4877: BasicPongMessage
 }
 
-class Msg():
-    def __init__(self, buffer: Buffer, protocol):
-        self.b = True
-        self.protocol = protocol
-        self.error = ''
-        print("Buffer: ", buffer)
-        try:
-            header = int.from_bytes(buffer.read(2), byteorder="big")
-            self.id = header >> 2
-            self.lenType = header & 3
-            self.dataLen = int.from_bytes(buffer.read(self.lenType), byteorder="big")
-            self.checkHeader()
-            deserialized = False
-            if (self.id in all_message):
-                if (self.id in id_to_class):
-                    value = id_to_class[self.id]()
-                    try:
-                        aze = Buffer(buffer.read(self.dataLen))
-                        buffer.end()
-                        value.deserialize(aze)
-                    except Exception as e:
-                        # print stack trace
-                        eprint(f"Exception: {e}")
-                    deserialized = True
-                    sprint(f"\t{value}")
-                a=self.id
-            else:
-                eprint(f"Message not recognised id={self.id} from {len(buffer.data)} bytes")
-            try:
-                if (buffer.pos == len(buffer.data)):
-                    pass
-                elif not deserialized:
-                    self.data = Data(buffer.read(self.dataLen))
-            except Exception as e:
-                eprint(f"Exception1: {e}")
-            deserialized = False
-        except IndexError as e:
-            eprint(f"IndexError: {e}")
-            buffer.pos = 0
-            self.b = False
-        except ValueError:
-            eprint(f"ValueError: {self.error}")
-            buffer.pos = 0
-            self.b = False
-        except Exception as e:
-            eprint(f"Exception2: {e}")
-        else:
-            buffer.end()
+class PacketReceiver:
+    def __init__(self, filter: str = 'tcp src port 5555', lfilter: Callable[[any], None] = lambda pkt: pkt.haslayer(Raw), max_buffer_size = 4096) -> None:
+        self.buffer: Buffer = Buffer()
+        self._filter = filter
+        self._lfilter = lfilter
+        self._thread: threading.Thread = None
+        self._max_buffer_size: int = max_buffer_size
 
-    def checkHeader(self):
-        if not self.lenType in [0, 1, 2, 3]:
-            self.error = 'Wrong lenType "' + str(self.lenType) + '"'
-            raise ValueError
-
-    def __bool__(self):
-        return self.b
-
-class Sniffer:
-    def __init__(self, concatMode = True):
-        self.protocolBuilder = ProtocolBuilder()
-        self.protocol = self.protocolBuilder.protocol
-        self.buffer = Buffer()
-        self.concatMode = concatMode
-        self.lastPkt = None
-
-    def run(self, callback, whitelist = None):
-        self.callback = callback
-        self.whitelist = whitelist
-        sniff(
-            filter='tcp src port 5555',
-            lfilter = lambda pkt: pkt.haslayer(Raw),
-            prn = lambda pkt: self.receive(pkt)
+    def run(self) -> None:
+        self._thread = AsyncSniffer(
+            filter=self._filter,
+            lfilter=self._lfilter,
+            prn=lambda pkt: self.__receive(pkt)
         )
+        self._thread.start()
 
-    def receive(self, pkt):
-        # I don't know what is this
-        ### From This
-        if self.lastPkt and pkt.getlayer(IP).src != self.lastPkt.getlayer(IP).src:
-            self.lastPkt = None
-        if self.lastPkt and pkt.getlayer(IP).id < self.lastPkt.getlayer(IP).id:
-            self.buffer.reorder(bytes(pkt.getlayer(Raw)),
-            len(self.lastPkt.getlayer(Raw)))
-        else:
-            if self.concatMode:
-                self.buffer += bytes(pkt.getlayer(Raw))
-            else:
-                self.buffer = Buffer()
-                self.buffer += bytes(pkt.getlayer(Raw))
-        self.lastPkt = pkt
-        ### To This
-
-
-        while len(self.buffer) and Msg(self.buffer, self.protocol):
-            pass
+    def stop(self) -> None:
+        if self._thread is not None:
+            self._thread.stop()
+            self._thread = None
         
+    def __receive(self, pkt: Packet):
+        new_packet: bytes = pkt[Raw].load
+        if len(self.buffer) + len(new_packet) > self._max_buffer_size:
+            wprint(f"Buffer is full, resetting buffer")
+            self.buffer = []
+            return
+        new_packet = bytearray(new_packet)
+        self.buffer += new_packet
+
+def get_packet_id(buffer: Buffer) -> bool:
+    if len(buffer) < 2:
+        return False
+    header = int.from_bytes(buffer.data[:2], "big")
+    id = header >> 2
+    return id if id in all_message else -1
+
+def get_packet_size(buffer: Buffer) -> int:
+    if len(buffer) < 3:
+        return False
+    len_type = int.from_bytes(buffer.data[:2], byteorder="big") & 3
+    data_len = int.from_bytes(buffer.data[2:2+len_type], "big")
+    size = 2 + len_type + data_len
+    return size
+
+PR = PacketReceiver()
+PR.run()
+i = 0
+while True:
+    if len(PR.buffer) >= 3:
+        packet_id: bool = get_packet_id(PR.buffer)
+        if packet_id == -1:
+            wprint(f"Unknown packet id {packet_id}")
+            # what to do here ? Reset all packet ? Raise an error ?
+        message = all_message[packet_id]
+        # print(f"Message received: {message}")
+        size: int = get_packet_size(PR.buffer)
+        if size > len(PR.buffer):
+            wprint(f"Packet is not complete, waiting for more data...")
+            continue
+        packet = Buffer(PR.buffer.data[3:size])
+        PR.buffer.data = PR.buffer.data[size:]
+        print(f"Buffer: {packet}")
+        if packet_id in id_to_class:
+            value = id_to_class[packet_id]()
+            value.deserialize(packet)
+            sprint(f"\t{value}")
+
+        
+
+PR.stop()
