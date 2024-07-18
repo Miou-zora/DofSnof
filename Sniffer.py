@@ -209,7 +209,7 @@ class BidExchangerObjectInfo:
             raise ValueError("Forbidden value (" + str(self.objectType) + ") on element of BidExchangerObjectInfo.objectType.")
         
     def __str__(self):
-        return f"objectUID: {self.objectUID}, objectGID: {self.objectGID}, objectType: {self.objectType}, effects: {self.effects}, prices: {self.prices}"
+        return f"objectUID: {self.objectUID}, objectGID: {self.objectGID}, objectType: {self.objectType}, effects: {[str(i) for i in self.effects]}, prices: {self.prices}"
 
 class ExchangeTypesExchangerDescriptionForUserMessage:
     def __init__(self) -> None:
