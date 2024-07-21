@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	game "go_test/game/network"
-	"go_test/network"
+	game "sniffsniff/game/network"
+	"sniffsniff/network"
 	"log"
 )
 

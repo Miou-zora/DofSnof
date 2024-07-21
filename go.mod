@@ -1,4 +1,4 @@
-module go_test
+module sniffsniff
 
 go 1.22.5
 
