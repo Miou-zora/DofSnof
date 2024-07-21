@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	game "sniffsniff/game/network"
 	"sniffsniff/network"
-	"log"
+	"sniffsniff/utils"
 )
 
 func askForDevice() string {
@@ -37,16 +38,29 @@ func main() {
 	receiver.Run()
 	for {
 		select {
-		case data := <-receiver.Buffer:
-			buffer = append(buffer, data...)
+		case raw_data := <-receiver.Buffer:
+			if len(raw_data) == 0 {
+				continue
+			}
+			buffer = append(buffer, raw_data...)
 			header := game.HeaderFromByte(buffer)
 			if header.IsValid() {
-				fmt.Println("Message: ", game.ALL_MESSAGE[int(header.Id)])
+				fmt.Println("Message: ", game.ID_TO_MESSAGE_NAMES[int(header.Id)])
 			} else {
 				fmt.Println("Invalid message: ", header.Id)
 			}
-            // TODO: Check is buffer is big enough to hold the header + message
-			buffer = make([]byte, 0) // It should only erase the size of the header + message
+			size := 2 + int(header.LenType) + int(header.DataLen)
+			if size > len(buffer) {
+				fmt.Print("Packet is not complete, waiting for more data...")
+				continue
+			}
+			data := utils.Buffer{Data: buffer[(2 + header.LenType):size], Pos: 0}
+			buffer = buffer[size:]
+			if game.ID_TO_MESSAGE[int(header.Id)] != nil {
+				message := game.ID_TO_MESSAGE[int(header.Id)]()
+				message.Deserialize(data)
+				fmt.Println("Message: ", message)
+			}
 		default:
 			continue
 		}

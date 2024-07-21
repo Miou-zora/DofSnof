@@ -22,6 +22,6 @@ func HeaderFromByte(data []byte) Header {
 }
 
 func (header Header) IsValid() bool {
-	_, ok := ALL_MESSAGE[int(header.Id)]
+	_, ok := ID_TO_MESSAGE_NAMES[int(header.Id)]
 	return ok
 }
