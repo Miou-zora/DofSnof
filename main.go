@@ -56,9 +56,9 @@ func main() {
 			}
 			data := utils.Buffer{Data: buffer[(2 + header.LenType):size], Pos: 0}
 			buffer = buffer[size:]
-			if game.ID_TO_MESSAGE[int(header.Id)] != nil {
-				message := game.ID_TO_MESSAGE[int(header.Id)]()
-				message.Deserialize(data)
+			if game.ID_TO_MESSAGE[header.Id] != nil {
+				message := game.ID_TO_MESSAGE[header.Id]()
+				message.Deserialize(&data)
 				fmt.Println("Message: ", message)
 			}
 		default:

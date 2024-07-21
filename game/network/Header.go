@@ -1,18 +1,18 @@
 package game
 
 type Header struct {
-	Id      int32
-	LenType int8
-	DataLen int64
+	Id      uint16
+	LenType uint8
+	DataLen uint32
 }
 
 func HeaderFromByte(data []byte) Header {
-	firstPart := int32(data[0])<<8 | int32(data[1])
+	firstPart := uint16(data[0])<<8 | uint16(data[1])
 	id := firstPart >> 2
-	lenType := int8(firstPart & 3)
-	dataLen := int64(0)
+	lenType := uint8(firstPart & 0b11)
+	dataLen := uint32(0)
 	for i := 0; i < int(lenType); i++ {
-		dataLen = dataLen<<8 | int64(data[2+i])
+		dataLen = dataLen<<8 | uint32(data[2+i])
 	}
 	return Header{
 		Id:      id,

@@ -12,7 +12,7 @@ func (message BasicPongMessage) GetId() int {
 	return 4877
 }
 
-func (message BasicPongMessage) Deserialize(buffer utils.Buffer) {
+func (message *BasicPongMessage) Deserialize(buffer *utils.Buffer) {
 	byteValue, err := buffer.ReadByte()
 	if err != nil {
 		panic(err)
@@ -25,5 +25,5 @@ func (message BasicPongMessage) String() string {
 }
 
 func CreateBasicPongMessage() FinalMessage {
-	return BasicPongMessage{Quiet: false}
+	return &BasicPongMessage{Quiet: false}
 }
