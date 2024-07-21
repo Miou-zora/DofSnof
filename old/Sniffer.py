@@ -1,3 +1,8 @@
+###
+### This code is useless, it's just a inheritance of the original code
+### It also contains some dark code (Sniffer.receive) that I don't understand
+###
+
 from scapy.all import sniff, Raw, IP, ICMP # pylint: disable=no-name-in-module
 from colorama import Fore, Back, Style
 from CustomDataWrapper import Data, Buffer
@@ -369,6 +374,8 @@ class Sniffer:
         )
 
     def receive(self, pkt):
+        # I don't know what is this
+        ### From This
         if self.lastPkt and pkt.getlayer(IP).src != self.lastPkt.getlayer(IP).src:
             self.lastPkt = None
         if self.lastPkt and pkt.getlayer(IP).id < self.lastPkt.getlayer(IP).id:
@@ -381,6 +388,9 @@ class Sniffer:
                 self.buffer = Buffer()
                 self.buffer += bytes(pkt.getlayer(Raw))
         self.lastPkt = pkt
+        ### To This
+
+
         while len(self.buffer) and Msg(self.buffer, self.protocol):
             pass
         
