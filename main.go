@@ -8,24 +8,24 @@ import (
 	"sniffsniff/utils"
 )
 
-func askForDevice() string {
-	deviceNames := network.GetListOfDevices()
-	for i, device := range deviceNames {
+func askForDevice() network.Device {
+	devices := network.GetListOfDevices()
+	for i, device := range devices {
 		println(i, ": ", device.Description)
 	}
 	var deviceIndex int = -1
-	for deviceIndex < 0 || deviceIndex >= len(deviceNames) {
+	for deviceIndex < 0 || deviceIndex >= len(devices) {
 		println("Please select a device: ")
 		_, err := fmt.Scanf("%d", &deviceIndex)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	return deviceNames[deviceIndex].Name
+	return devices[deviceIndex]
 }
 
 func main() {
-	deviceName := askForDevice()
+	device := askForDevice()
 
 	buffer := make([]byte, 0)
 
@@ -33,7 +33,7 @@ func main() {
 		Buffer:        make(chan []byte, 4096),
 		MaxBufferSize: 1600,
 		Filter:        "tcp src port 5555",
-		Device:        deviceName,
+		Device:        device,
 	}
 	receiver.Run()
 	for {

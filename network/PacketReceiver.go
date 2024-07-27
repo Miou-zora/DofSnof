@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/google/gopacket"
@@ -12,7 +13,7 @@ type PacketSniffer struct {
 	Buffer        chan []byte
 	MaxBufferSize int32
 	Filter        string
-	Device        string
+	Device        Device
 }
 
 func (receiver *PacketSniffer) Run() {
@@ -20,8 +21,9 @@ func (receiver *PacketSniffer) Run() {
 }
 
 func (receiver *PacketSniffer) sniff() {
+	fmt.Println("Sniffing on device:", receiver.Device.Description)
 	for true {
-		handle, err := pcap.OpenLive(receiver.Device, receiver.MaxBufferSize, false, pcap.BlockForever)
+		handle, err := pcap.OpenLive(receiver.Device.Name, receiver.MaxBufferSize, false, pcap.BlockForever)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -66,3 +66,37 @@ func (buffer *Buffer) ReadUTF() (string, error) {
 	buffer.Pos += int(length)
 	return value, nil
 }
+
+func (buffer *Buffer) ReadVarUhInt() (uint32, error) {
+	value := uint32(0)
+	offset := uint32(0)
+	for offset < 32 {
+		byteValue, err := buffer.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		value = value | uint32(byteValue&127)<<offset
+		if byteValue&128 == 0 {
+			return value, nil
+		}
+		offset += 7
+	}
+	return 0, errors.New("too much data")
+}
+
+func (buffer *Buffer) ReadVarUhLong() (uint64, error) {
+	value := uint64(0)
+	offset := uint32(0)
+	for offset < 64 {
+		byteValue, err := buffer.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		value = value | uint64(byteValue&127)<<offset
+		if byteValue&128 == 0 {
+			return value, nil
+		}
+		offset += 7
+	}
+	return 0, errors.New("too much data")
+}
