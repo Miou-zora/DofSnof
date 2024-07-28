@@ -1,8 +1,8 @@
 package game
 
 import (
-	"sniffsniff/utils"
 	"encoding/json"
+	"sniffsniff/utils"
 )
 
 type ExchangeTypesExchangerDescriptionForUserMessage struct {
@@ -14,19 +14,23 @@ func (message ExchangeTypesExchangerDescriptionForUserMessage) GetId() int {
 	return 6572
 }
 
-func (message *ExchangeTypesExchangerDescriptionForUserMessage) Deserialize(buffer *utils.Buffer) {
-	message._objectTypeFunc(buffer)
+func (message *ExchangeTypesExchangerDescriptionForUserMessage) Deserialize(buffer *utils.Buffer) error {
+	err := message._objectTypeFunc(buffer)
+	if err != nil {
+		return err
+	}
 	typeDescriptionLength, err := buffer.ReadUShort()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	message.TypeDescription = make([]uint32, typeDescriptionLength)
 	for i := 0; i < int(typeDescriptionLength); i++ {
 		message.TypeDescription[i], err = buffer.ReadVarUhInt()
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
 func (message ExchangeTypesExchangerDescriptionForUserMessage) String() string {
@@ -41,10 +45,11 @@ func CreateExchangeTypesExchangerDescriptionForUserMessage() FinalMessage {
 	return &ExchangeTypesExchangerDescriptionForUserMessage{}
 }
 
-func (message *ExchangeTypesExchangerDescriptionForUserMessage) _objectTypeFunc(buffer *utils.Buffer) {
+func (message *ExchangeTypesExchangerDescriptionForUserMessage) _objectTypeFunc(buffer *utils.Buffer) error {
 	objectType, err := buffer.ReadUInt()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	message.ObjectType = objectType
+	return nil
 }

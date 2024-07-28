@@ -16,28 +16,29 @@ func (message ChatServerMessage) GetId() int {
 	return 881
 }
 
-func (message *ChatServerMessage) Deserialize(buffer *utils.Buffer) {
+func (message *ChatServerMessage) Deserialize(buffer *utils.Buffer) error {
 	message.BaseChatServerMessage.Deserialize(buffer)
 	senderId, err := buffer.ReadULong()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	message.SenderId = senderId
 	senderName, err := buffer.ReadUTF()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	message.SenderName = senderName
 	prefix, err := buffer.ReadUTF()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	message.Prefix = prefix
 	senderAccountId, err := buffer.ReadUInt()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	message.SenderAccountId = senderAccountId
+	return nil
 }
 
 func (message ChatServerMessage) String() string {

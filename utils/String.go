@@ -7,10 +7,7 @@ type Stringify interface {
 }
 
 func BoolToString(value bool) string {
-	if value {
-		return "true"
-	}
-	return "false"
+	return fmt.Sprint(value)
 }
 
 func ByteToString(value byte) string {

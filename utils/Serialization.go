@@ -1,5 +1,5 @@
 package utils
 
 type Deserializer interface {
-	Deserialize(buffer *Buffer)
+	Deserialize(buffer *Buffer) error
 }

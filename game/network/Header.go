@@ -25,3 +25,7 @@ func (header Header) IsValid() bool {
 	_, ok := ID_TO_MESSAGE_NAMES[int(header.Id)]
 	return ok
 }
+
+func (header Header) GetSize() int {
+	return 2 + int(header.LenType) + int(header.DataLen)
+}

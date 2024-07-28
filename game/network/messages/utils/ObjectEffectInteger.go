@@ -10,13 +10,14 @@ type ObjectEffectInteger struct {
 	Value        uint32
 }
 
-func (objectEffectInteger *ObjectEffectInteger) Deserialize(buffer *utils.Buffer) {
+func (objectEffectInteger *ObjectEffectInteger) Deserialize(buffer *utils.Buffer) error {
 	objectEffectInteger.ObjectEffect.Deserialize(buffer)
 	value, err := buffer.ReadVarUhInt()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	objectEffectInteger.Value = value
+	return nil
 }
 
 func (objectEffectInteger *ObjectEffectInteger) String() string {
