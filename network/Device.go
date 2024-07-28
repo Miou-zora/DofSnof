@@ -19,9 +19,9 @@ func GetListOfDevices() []Device {
 }
 
 func toDevices(deviceInterfaces []pcap.Interface) []Device {
-	var devices []Device
-	for _, device := range deviceInterfaces {
-		devices = append(devices, Device{Name: device.Name, Description: device.Description})
+	devices := make([]Device, len(deviceInterfaces))
+	for index, device := range deviceInterfaces {
+		devices[index] = Device{Name: device.Name, Description: device.Description}
 	}
 	return devices
 }
