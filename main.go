@@ -48,6 +48,8 @@ func main() {
 				fmt.Println("Message: ", game.ID_TO_MESSAGE_NAMES[int(header.Id)])
 			} else {
 				fmt.Println("Invalid message: ", header.Id)
+				buffer = buffer[:0]
+				continue
 			}
 			size := 2 + int(header.LenType) + int(header.DataLen)
 			if size > len(buffer) {
