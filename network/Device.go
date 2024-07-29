@@ -1,21 +1,23 @@
 package network
 
 import (
+	"fmt"
 	"log"
+
 	"github.com/google/gopacket/pcap"
 )
 
 type Device struct {
-	Name string
+	Name        string
 	Description string
 }
 
-func GetListOfDevices() []Device {
+func getListOfDevices() ([]Device, error) {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
-		log.Fatalf("Error finding devices: %v", err)
+		return nil, err
 	}
-	return toDevices(devices)
+	return toDevices(devices), nil
 }
 
 func toDevices(deviceInterfaces []pcap.Interface) []Device {
@@ -24,4 +26,23 @@ func toDevices(deviceInterfaces []pcap.Interface) []Device {
 		devices[index] = Device{Name: device.Name, Description: device.Description}
 	}
 	return devices
+}
+
+func AskForDevice() (Device, error) {
+	devices, err := getListOfDevices()
+	if err != nil {
+		return Device{}, err
+	}
+	for i, device := range devices {
+		println(i, ": ", device.Description)
+	}
+	var deviceIndex int = -1
+	for deviceIndex < 0 || deviceIndex >= len(devices) {
+		println("Please select a device: ")
+		_, err := fmt.Scanf("%d", &deviceIndex)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return devices[deviceIndex], nil
 }
