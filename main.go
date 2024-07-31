@@ -45,9 +45,6 @@ func main() {
 	for {
 		PullMessages(receiver, buffer, &messages)
 		for _, message := range messages {
-			// if message is a type of game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage
-			// then call a function
-			fmt.Println("azeazeMessage: ", message)
 			if _, ok := message.(*game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage); ok {
 				SaveItemToDb(db, message.(*game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage))
 			}
@@ -69,8 +66,6 @@ func SaveItemToDb(db *sqlx.DB, item *game_message.ExchangeTypesItemsExchangerDes
 		Price100:  int(item.ItemTypeDescription[0].Prices[2]),
 		Timestamp: utils.GetTimestamp(),
 	}
-	// if item is already in the db, update it
-	// else insert it
 	if _, err := db.NamedExec("SELECT * FROM items WHERE id = :id", item_dto); err == nil {
 		_, err := db.NamedExec("UPDATE items SET price1 = :price1, price10 = :price10, price100 = :price100, timestamp = :timestamp WHERE id = :id", item_dto)
 		if err != nil {
