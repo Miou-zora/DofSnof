@@ -2,6 +2,11 @@ module sniffsniff
 
 go 1.22.5
 
-require github.com/google/gopacket v1.1.19
+require (
+	github.com/google/gopacket v1.1.19
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/joho/godotenv v1.5.1
+	github.com/lib/pq v1.10.9
+)
 
 require golang.org/x/sys v0.0.0-20190412213103-97732733099d // indirect

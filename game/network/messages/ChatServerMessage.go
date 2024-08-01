@@ -12,7 +12,7 @@ type ChatServerMessage struct {
 	SenderAccountId       uint32
 }
 
-func (message ChatServerMessage) GetId() int {
+func (message ChatServerMessage) GetId() Id {
 	return 881
 }
 

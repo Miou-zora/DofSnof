@@ -10,7 +10,7 @@ type ExchangeTypesExchangerDescriptionForUserMessage struct {
 	TypeDescription []uint32
 }
 
-func (message ExchangeTypesExchangerDescriptionForUserMessage) GetId() int {
+func (message ExchangeTypesExchangerDescriptionForUserMessage) GetId() Id {
 	return 6572
 }
 
