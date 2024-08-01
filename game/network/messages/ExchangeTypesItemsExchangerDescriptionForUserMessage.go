@@ -12,7 +12,7 @@ type ExchangeTypesItemsExchangerDescriptionForUserMessage struct {
 	ItemTypeDescription []game.BidExchangerObjectInfo
 }
 
-func (message ExchangeTypesItemsExchangerDescriptionForUserMessage) GetId() int {
+func (message ExchangeTypesItemsExchangerDescriptionForUserMessage) GetId() Id {
 	return 2738
 }
 

@@ -8,7 +8,7 @@ type BasicPongMessage struct {
 	Quiet bool
 }
 
-func (message BasicPongMessage) GetId() int {
+func (message BasicPongMessage) GetId() Id {
 	return 4877
 }
 

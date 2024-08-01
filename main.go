@@ -3,16 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"sniffsniff/database"
 	game_network "sniffsniff/game/network"
 	game_message "sniffsniff/game/network/messages"
 	game_resources "sniffsniff/game/resources"
 	"sniffsniff/network"
 	"sniffsniff/utils"
-
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
-
-	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -23,13 +19,14 @@ const (
 )
 
 func main() {
-	db, err := SetupDb()
-	if err != nil {
-		log.Fatalln(err)
+	SetupDotEnv()
+	db := &database.DB{}
+	if err := db.Setup(); err != nil {
+		log.Fatalf("Error setting up database: %v", err)
 	}
 	defer db.Close()
-	device, err := network.AskForDevice()
 
+	device, err := network.AskForDevice()
 	if err != nil {
 		log.Fatalf("Error getting device: %v", err)
 	}
@@ -41,24 +38,38 @@ func main() {
 		Device: device,
 	}
 	messages := make([]game_message.FinalMessage, 0)
+	message_id_to_callback := map[game_message.Id]func(*game_message.FinalMessage){
+		(game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage{}).GetId(): func(message *game_message.FinalMessage) {
+			item := (*message).(*game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage)
+			if len((*item).ItemTypeDescription) == 0 {
+				return
+			}
+			SaveItemToDb(db, item)
+		},
+	}
+
 	receiver.Run()
 	for {
 		PullMessages(receiver, buffer, &messages)
-		for _, message := range messages {
-			if _, ok := message.(*game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage); ok {
-				SaveItemToDb(db, message.(*game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage))
-			}
-		}
-		messages = messages[:0]
+		HandleMessages(&message_id_to_callback, &messages)
+		UpdateMessages(&messages)
 	}
 }
 
-func SaveItemToDb(db *sqlx.DB, item *game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage) {
-	if len(item.ItemTypeDescription) < 1 || len(item.ItemTypeDescription[0].Prices) < 3 {
-		fmt.Println("Error: item is not valid")
-		return
+func HandleMessages(message_id_to_callback *map[game_message.Id]func(*game_message.FinalMessage), messages *[]game_message.FinalMessage) {
+	for _, message := range *messages {
+		if callback, ok := (*message_id_to_callback)[message.GetId()]; ok {
+			callback(&message)
+		}
 	}
-	item_dto := game_resources.Item{
+}
+
+func UpdateMessages(messages *[]game_message.FinalMessage) {
+	(*messages) = (*messages)[:0]
+}
+
+func SaveItemToDb(db *database.DB, item *game_message.ExchangeTypesItemsExchangerDescriptionForUserMessage) {
+	item_dto := game_resources.Items{
 		Id:        item.ObjectGID,
 		Name:      "defaultName",
 		Price1:    int(item.ItemTypeDescription[0].Prices[0]),
@@ -66,40 +77,21 @@ func SaveItemToDb(db *sqlx.DB, item *game_message.ExchangeTypesItemsExchangerDes
 		Price100:  int(item.ItemTypeDescription[0].Prices[2]),
 		Timestamp: utils.GetTimestamp(),
 	}
-	if _, err := db.NamedExec("SELECT * FROM items WHERE id = :id", item_dto); err == nil {
-		_, err := db.NamedExec("UPDATE items SET price1 = :price1, price10 = :price10, price100 = :price100, timestamp = :timestamp WHERE id = :id", item_dto)
+	if !db.Exist(item_dto) {
+		_, err := db.Save(item_dto)
+		if err != nil {
+			fmt.Println("Error inserting item: ", err)
+		} else {
+			fmt.Println("Item inserted successfully")
+		}
+	} else {
+		_, err := db.Update(item_dto)
 		if err != nil {
 			fmt.Println("Error updating item: ", err)
 		} else {
 			fmt.Println("Item updated successfully")
 		}
-		return
 	}
-	_, err := db.NamedExec("INSERT INTO items (id, name, price1, price10, price100, timestamp) VALUES (:id, :name, :price1, :price10, :price100, :timestamp)", item_dto)
-	if err != nil {
-		fmt.Println("Error inserting item: ", err)
-	} else {
-		fmt.Println("Item inserted successfully")
-	}
-}
-
-func SetupDb() (*sqlx.DB, error) {
-	SetupDotEnv()
-	user := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	dbname := os.Getenv("POSTGRES_DB")
-	host := os.Getenv("POSTGRES_HOST")
-
-	db, err := sqlx.Connect("postgres", "user="+user+" dbname="+dbname+" sslmode=disable password="+password+" host="+host)
-	if err != nil {
-		return db, err
-	}
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Println("Successfully Connected")
-	}
-	return db, err
 }
 
 func SetupDotEnv() {
@@ -116,21 +108,21 @@ func PullMessages(receiver network.PacketSniffer, buffer []byte, messages *[]gam
 			return
 		}
 		buffer = append(buffer, raw_data...)
-		UnstackMessages(buffer, messages)
+		UnpackMessage(buffer, messages)
 	default:
 		return
 	}
 }
 
-func UnstackMessages(buffer []byte, messages *[]game_message.FinalMessage) {
+func UnpackMessage(buffer []byte, messages *[]game_message.FinalMessage) {
 	for len(buffer) > 2 {
 		header := game_network.HeaderFromByte(buffer)
-		if !header.IsValid() {
+		if !header.Valid() {
 			fmt.Println("Invalid message: ", header.Id)
 			buffer = buffer[:0]
 			continue
 		}
-		size := header.GetSize()
+		size := header.TotalSize()
 		if size > len(buffer) {
 			fmt.Print("Packet is not complete, waiting for more data...")
 			buffer = buffer[:0]
@@ -139,9 +131,7 @@ func UnstackMessages(buffer []byte, messages *[]game_message.FinalMessage) {
 		data := utils.Buffer{Data: buffer[(2 + header.LenType):size], Pos: 0}
 		buffer = buffer[size:]
 		message, err := GetMessageFromData(header, data)
-		if err != nil {
-			continue
-		} else {
+		if err == nil {
 			*messages = append(*messages, message)
 		}
 	}

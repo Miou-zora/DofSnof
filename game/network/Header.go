@@ -21,11 +21,19 @@ func HeaderFromByte(data []byte) Header {
 	}
 }
 
-func (header Header) IsValid() bool {
+func (header Header) Valid() bool {
 	_, ok := ID_TO_MESSAGE_NAMES[int(header.Id)]
 	return ok
 }
 
-func (header Header) GetSize() int {
-	return 2 + int(header.LenType) + int(header.DataLen)
+func (header Header) TotalSize() int {
+	return header.Size() + header.MessageSize()
+}
+
+func (header Header) Size() int {
+	return 2 + int(header.LenType)
+}
+
+func (header Header) MessageSize() int {
+	return int(header.DataLen)
 }

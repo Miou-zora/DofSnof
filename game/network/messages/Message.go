@@ -2,8 +2,10 @@ package game
 
 import "sniffsniff/utils"
 
+type Id int
+
 type IMessage interface {
-	GetId() int
+	GetId() Id
 }
 
 type FinalMessage interface {

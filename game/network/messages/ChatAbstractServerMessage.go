@@ -9,7 +9,7 @@ type ChatAbstractServerMessage struct {
 	Fingerprint string
 }
 
-func (message ChatAbstractServerMessage) GetId() int {
+func (message ChatAbstractServerMessage) GetId() Id {
 	return 880
 }
 

@@ -1,6 +1,6 @@
 package game
 
-type Item struct {
+type Items struct {
 	Id        uint32 `db:"id"`
 	Name      string `db:"name"`
 	Price1    int    `db:"price1"`
